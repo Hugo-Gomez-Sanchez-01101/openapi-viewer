@@ -1,0 +1,123 @@
+openapi: 3.0.3
+info:
+  title: API de Ejemplo - Tienda
+  description: Documento OpenAPI de ejemplo para probar el visor.
+  version: 1.0.0
+servers:
+  - url: https://api.ejemplo.com/v1
+tags:
+  - name: productos
+    description: Gestión de productos
+  - name: pedidos
+    description: Gestión de pedidos
+paths:
+  /productos:
+    get:
+      tags: [productos]
+      summary: Listar productos
+      parameters:
+        - name: categoria
+          in: query
+          schema:
+            type: string
+        - name: limite
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Lista de productos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Producto'
+    post:
+      tags: [productos]
+      summary: Crear producto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductoNuevo'
+      responses:
+        '201':
+          description: Producto creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '400':
+          description: Datos inválidos
+  /productos/{id}:
+    get:
+      tags: [productos]
+      summary: Obtener producto por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Producto encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '404':
+          description: No encontrado
+  /pedidos:
+    post:
+      tags: [pedidos]
+      summary: Crear pedido
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PedidoNuevo'
+      responses:
+        '201':
+          description: Pedido creado
+components:
+  schemas:
+    Producto:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 42
+        nombre:
+          type: string
+          example: Teclado mecánico
+        precio:
+          type: number
+          format: float
+          example: 89.99
+        categoria:
+          type: string
+          example: electrónica
+    ProductoNuevo:
+      type: object
+      required: [nombre, precio]
+      properties:
+        nombre:
+          type: string
+        precio:
+          type: number
+        categoria:
+          type: string
+    PedidoNuevo:
+      type: object
+      required: [productoId, cantidad]
+      properties:
+        productoId:
+          type: integer
+        cantidad:
+          type: integer
+          minimum: 1

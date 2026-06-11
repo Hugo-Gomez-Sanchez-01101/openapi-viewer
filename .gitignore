@@ -1,0 +1,3 @@
+# Certificados cliente: nunca deben acabar en el repositorio
+*.p12
+*.pfx

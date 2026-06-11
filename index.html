@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visor OpenAPI</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #fafafa;
+    }
+    header {
+      background: #1b1b32;
+      color: #fff;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    header h1 {
+      font-size: 18px;
+      margin: 0;
+      font-weight: 600;
+    }
+    header .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+    .btn {
+      background: #4990e2;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .btn:hover { background: #3b7dc9; }
+    .btn.secondary {
+      background: transparent;
+      border: 1px solid #6b6b8a;
+    }
+    .btn.secondary:hover { background: rgba(255,255,255,0.1); }
+    #cert-status { font-size: 13px; color: #8fd18f; }
+    dialog#cert-dialog {
+      border: none;
+      border-radius: 12px;
+      padding: 24px;
+      width: 420px;
+      max-width: 90vw;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+    }
+    dialog#cert-dialog::backdrop { background: rgba(0,0,0,0.4); }
+    dialog#cert-dialog h2 { margin: 0 0 6px; font-size: 17px; }
+    dialog#cert-dialog p.hint { margin: 0 0 16px; font-size: 13px; color: #777; }
+    dialog#cert-dialog label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; color: #333; }
+    dialog#cert-dialog input[type="password"] {
+      display: block;
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    dialog#cert-dialog input[type="file"] { display: block; font-size: 13px; }
+    dialog#cert-dialog .dialog-error { color: #b3261e; font-size: 13px; margin-top: 10px; min-height: 18px; }
+    dialog#cert-dialog .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+    dialog#cert-dialog .btn.danger { background: #d9534f; }
+    dialog#cert-dialog .btn.danger:hover { background: #c4423e; }
+    dialog#cert-dialog .btn.plain { background: #e8e8ee; color: #333; }
+    dialog#cert-dialog .btn.plain:hover { background: #dcdce4; }
+    #tab-bar {
+      display: none;
+      background: #2a2a45;
+      padding: 0 12px;
+      overflow-x: auto;
+      white-space: nowrap;
+      position: sticky;
+      top: 62px;
+      z-index: 99;
+      scrollbar-width: thin;
+    }
+    .tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      color: #b8b8d0;
+      font-size: 13px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      max-width: 260px;
+      user-select: none;
+    }
+    .tab:hover { color: #fff; background: rgba(255,255,255,0.05); }
+    .tab.active {
+      color: #fff;
+      border-bottom-color: #4990e2;
+      background: rgba(255,255,255,0.07);
+    }
+    .tab .tab-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .tab .tab-close {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      line-height: 16px;
+      text-align: center;
+      border-radius: 50%;
+      font-size: 14px;
+      color: #8888a8;
+    }
+    .tab .tab-close:hover {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+    #drop-zone {
+      max-width: 720px;
+      margin: 60px auto;
+      padding: 60px 40px;
+      border: 2px dashed #b0b0c0;
+      border-radius: 12px;
+      text-align: center;
+      color: #555;
+      background: #fff;
+      transition: border-color 0.2s, background 0.2s;
+      cursor: pointer;
+    }
+    #drop-zone.dragover {
+      border-color: #4990e2;
+      background: #eef5fd;
+    }
+    #drop-zone .icon { font-size: 48px; margin-bottom: 12px; }
+    #drop-zone h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; }
+    #drop-zone p { margin: 4px 0; font-size: 14px; color: #888; }
+    #error-box {
+      max-width: 720px;
+      margin: 20px auto;
+      padding: 14px 18px;
+      background: #fdecea;
+      border: 1px solid #f5c6c0;
+      border-radius: 8px;
+      color: #b3261e;
+      font-size: 14px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      display: none;
+    }
+    .doc-panel { display: none; }
+    .doc-panel.active { display: block; }
+    input[type="file"] { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📘 Visor OpenAPI</h1>
+    <div class="actions">
+      <span id="cert-status" title="Certificado cliente para mutual TLS"></span>
+      <button class="btn secondary" id="btn-cert">Certificado…</button>
+      <button class="btn" id="btn-open">Abrir archivos…</button>
+    </div>
+    <input type="file" id="file-input" multiple accept=".json,.yaml,.yml,application/json,text/yaml" />
+  </header>
+
+  <div id="tab-bar"></div>
+
+  <div id="file-warning" style="display:none; max-width:720px; margin:20px auto 0; padding:12px 18px; background:#fff8e1; border:1px solid #f0d98c; border-radius:8px; color:#7a5c00; font-size:14px;">
+    ⚠️ Estás abriendo el visor directamente desde disco (<code>file://</code>). Las peticiones de
+    "Try it out" a APIs sin CORS serán bloqueadas por el navegador. Para evitarlo, arranca el
+    servidor local con <code>start.cmd</code> y abre <a href="http://localhost:8080">http://localhost:8080</a>.
+  </div>
+
+  <div id="error-box"></div>
+
+  <div id="drop-zone">
+    <div class="icon">📄</div>
+    <h2>Arrastra aquí tus documentos OpenAPI</h2>
+    <p>o haz clic para seleccionar uno o varios archivos</p>
+    <p>Formatos soportados: <strong>.json</strong>, <strong>.yaml</strong>, <strong>.yml</strong> (OpenAPI 2.0 / 3.x)</p>
+  </div>
+
+  <div id="panels"></div>
+
+  <dialog id="cert-dialog">
+    <h2>🔐 Certificado cliente (mutual TLS)</h2>
+    <p class="hint">
+      Para APIs que exigen certificado (p. ej. idCAT). Se envía al servidor local y se
+      mantiene solo en memoria: no se guarda en disco ni sale de tu máquina.
+    </p>
+    <div id="cert-current" style="font-size:13px; color:#2e7d32; margin-bottom:4px;"></div>
+    <label for="cert-file">Archivo .p12 / .pfx</label>
+    <input type="file" id="cert-file" accept=".p12,.pfx" />
+    <label for="cert-pass">Contraseña del certificado</label>
+    <input type="password" id="cert-pass" autocomplete="off" />
+    <div class="dialog-error" id="cert-error"></div>
+    <div class="dialog-actions">
+      <button class="btn danger" id="cert-remove" style="display:none">Quitar certificado</button>
+      <button class="btn plain" id="cert-cancel">Cancelar</button>
+      <button class="btn" id="cert-save">Usar certificado</button>
+    </div>
+  </dialog>
+
+  <script src="https://unpkg.com/js-yaml@4/dist/js-yaml.min.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+  <script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const errorBox = document.getElementById('error-box');
+    const tabBar = document.getElementById('tab-bar');
+    const panelsContainer = document.getElementById('panels');
+
+    // Documentos abiertos: { id, name, panelEl, tabEl }
+    const docs = [];
+    let activeId = null;
+    let nextId = 1;
+
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.style.display = 'block';
+    }
+
+    function clearError() {
+      errorBox.textContent = '';
+      errorBox.style.display = 'none';
+    }
+
+    function parseSpec(text, fileName) {
+      const isJson = /\.json$/i.test(fileName) || text.trimStart().startsWith('{');
+      if (isJson) {
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          throw new Error('JSON inválido: ' + e.message);
+        }
+      }
+      try {
+        return jsyaml.load(text);
+      } catch (e) {
+        throw new Error('YAML inválido: ' + e.message);
+      }
+    }
+
+    function validateSpec(spec) {
+      if (!spec || typeof spec !== 'object') {
+        throw new Error('El archivo no contiene un documento válido.');
+      }
+      if (!spec.openapi && !spec.swagger) {
+        throw new Error('El documento no parece ser una especificación OpenAPI: falta el campo "openapi" o "swagger".');
+      }
+    }
+
+    // Si el visor se sirve desde server.js (http://localhost), las peticiones
+    // de "Try it out" hacia otros orígenes se redirigen por /proxy para
+    // evitar bloqueos CORS. Abierto como file:// no hay proxy disponible.
+    const proxyAvailable = location.protocol === 'http:' || location.protocol === 'https:';
+    if (!proxyAvailable) document.getElementById('file-warning').style.display = 'block';
+
+    function proxyInterceptor(req) {
+      if (!proxyAvailable) return req;
+      try {
+        const target = new URL(req.url, location.href);
+        if (target.origin !== location.origin) {
+          req.url = location.origin + '/proxy?url=' + encodeURIComponent(target.href);
+        }
+      } catch { /* URL no parseable: se deja tal cual */ }
+      return req;
+    }
+
+    function updateView() {
+      tabBar.style.display = docs.length ? 'block' : 'none';
+      dropZone.style.display = docs.length ? 'none' : 'block';
+      docs.forEach(doc => {
+        const isActive = doc.id === activeId;
+        doc.tabEl.classList.toggle('active', isActive);
+        doc.panelEl.classList.toggle('active', isActive);
+      });
+    }
+
+    function activateTab(id) {
+      activeId = id;
+      updateView();
+      const doc = docs.find(d => d.id === id);
+      if (doc) doc.tabEl.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
+    function closeTab(id) {
+      const idx = docs.findIndex(d => d.id === id);
+      if (idx === -1) return;
+      const [doc] = docs.splice(idx, 1);
+      doc.tabEl.remove();
+      doc.panelEl.remove();
+      if (activeId === id) {
+        const neighbor = docs[idx] || docs[idx - 1];
+        activeId = neighbor ? neighbor.id : null;
+      }
+      updateView();
+    }
+
+    function addDocument(spec, fileName) {
+      const id = nextId++;
+
+      const panelEl = document.createElement('div');
+      panelEl.className = 'doc-panel';
+      panelEl.id = 'doc-panel-' + id;
+      panelsContainer.appendChild(panelEl);
+
+      const tabEl = document.createElement('div');
+      tabEl.className = 'tab';
+      tabEl.title = fileName;
+
+      const titleEl = document.createElement('span');
+      titleEl.className = 'tab-title';
+      titleEl.textContent = fileName;
+
+      const closeEl = document.createElement('span');
+      closeEl.className = 'tab-close';
+      closeEl.textContent = '×';
+      closeEl.title = 'Cerrar ' + fileName;
+
+      tabEl.appendChild(titleEl);
+      tabEl.appendChild(closeEl);
+      tabBar.appendChild(tabEl);
+
+      tabEl.addEventListener('click', () => activateTab(id));
+      closeEl.addEventListener('click', e => {
+        e.stopPropagation();
+        closeTab(id);
+      });
+
+      SwaggerUIBundle({
+        spec,
+        dom_id: '#doc-panel-' + id,
+        deepLinking: false,
+        presets: [SwaggerUIBundle.presets.apis],
+        plugins: [SwaggerUIBundle.plugins.DownloadUrl],
+        layout: 'BaseLayout',
+        docExpansion: 'list',
+        defaultModelsExpandDepth: 1,
+        tryItOutEnabled: true,
+        requestInterceptor: proxyInterceptor,
+      });
+
+      docs.push({ id, name: fileName, panelEl, tabEl });
+      activateTab(id);
+    }
+
+    function loadFile(file) {
+      return new Promise(resolve => {
+        if (!/\.(json|yaml|yml)$/i.test(file.name)) {
+          resolve(file.name + ': tipo de archivo no soportado (usa .json, .yaml o .yml).');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const spec = parseSpec(reader.result, file.name);
+            validateSpec(spec);
+            addDocument(spec, file.name);
+            resolve(null);
+          } catch (e) {
+            resolve(file.name + ': ' + e.message);
+          }
+        };
+        reader.onerror = () => resolve(file.name + ': no se pudo leer el archivo.');
+        reader.readAsText(file);
+      });
+    }
+
+    async function loadFiles(fileList) {
+      clearError();
+      const errors = [];
+      for (const file of fileList) {
+        const err = await loadFile(file);
+        if (err) errors.push(err);
+      }
+      if (errors.length) showError(errors.join('\n'));
+    }
+
+    // --- Gestión del certificado cliente (mutual TLS) ---
+    const certDialog = document.getElementById('cert-dialog');
+    const certStatus = document.getElementById('cert-status');
+    const certCurrent = document.getElementById('cert-current');
+    const certFile = document.getElementById('cert-file');
+    const certPass = document.getElementById('cert-pass');
+    const certError = document.getElementById('cert-error');
+    const certRemove = document.getElementById('cert-remove');
+
+    function refreshCertUI(name) {
+      certStatus.textContent = name ? '🔐 ' + name : '';
+      certCurrent.textContent = name ? 'Certificado activo: ' + name : 'No hay ningún certificado activo.';
+      certRemove.style.display = name ? 'inline-block' : 'none';
+    }
+
+    async function fetchCertStatus() {
+      if (!proxyAvailable) return;
+      try {
+        const r = await fetch('/cert');
+        const data = await r.json();
+        refreshCertUI(data.name);
+      } catch { /* servidor sin soporte /cert: se ignora */ }
+    }
+
+    document.getElementById('btn-cert').addEventListener('click', () => {
+      if (!proxyAvailable) {
+        showError('La gestión de certificados requiere el servidor local: arranca start.cmd y abre el visor por http://localhost.');
+        return;
+      }
+      certError.textContent = '';
+      certPass.value = '';
+      certFile.value = '';
+      certDialog.showModal();
+    });
+
+    document.getElementById('cert-cancel').addEventListener('click', () => certDialog.close());
+
+    document.getElementById('cert-save').addEventListener('click', async () => {
+      certError.textContent = '';
+      const file = certFile.files[0];
+      if (!file) {
+        certError.textContent = 'Selecciona un archivo .p12 o .pfx.';
+        return;
+      }
+      const buf = await file.arrayBuffer();
+      const pfxBase64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      try {
+        const r = await fetch('/cert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: file.name, pfxBase64, pass: certPass.value }),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          certError.textContent = data.error || 'Error al cargar el certificado.';
+          return;
+        }
+        refreshCertUI(data.name);
+        certDialog.close();
+      } catch (e) {
+        certError.textContent = 'No se pudo contactar con el servidor local: ' + e.message;
+      }
+    });
+
+    certRemove.addEventListener('click', async () => {
+      try {
+        await fetch('/cert', { method: 'DELETE' });
+        refreshCertUI(null);
+        certDialog.close();
+      } catch (e) {
+        certError.textContent = 'No se pudo contactar con el servidor local: ' + e.message;
+      }
+    });
+
+    fetchCertStatus();
+
+    document.getElementById('btn-open').addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) {
+        loadFiles([...fileInput.files]);
+        fileInput.value = '';
+      }
+    });
+
+    // Drag & drop sobre toda la página
+    ['dragenter', 'dragover'].forEach(evt =>
+      document.body.addEventListener(evt, e => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      })
+    );
+    ['dragleave', 'drop'].forEach(evt =>
+      document.body.addEventListener(evt, e => {
+        e.preventDefault();
+        if (evt === 'drop' || e.target === document.body) {
+          dropZone.classList.remove('dragover');
+        }
+      })
+    );
+    document.body.addEventListener('drop', e => {
+      if (e.dataTransfer.files.length) loadFiles([...e.dataTransfer.files]);
+    });
+  </script>
+</body>
+</html>
