@@ -53,7 +53,7 @@
     }
     .btn.secondary:hover { background: rgba(255,255,255,0.1); }
     #cert-status { font-size: 13px; color: #8fd18f; }
-    dialog#cert-dialog {
+    dialog.modal {
       border: none;
       border-radius: 12px;
       padding: 24px;
@@ -61,25 +61,28 @@
       max-width: 90vw;
       box-shadow: 0 8px 40px rgba(0,0,0,0.25);
     }
-    dialog#cert-dialog::backdrop { background: rgba(0,0,0,0.4); }
-    dialog#cert-dialog h2 { margin: 0 0 6px; font-size: 17px; }
-    dialog#cert-dialog p.hint { margin: 0 0 16px; font-size: 13px; color: #777; }
-    dialog#cert-dialog label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; color: #333; }
-    dialog#cert-dialog input[type="password"] {
+    dialog.modal::backdrop { background: rgba(0,0,0,0.4); }
+    dialog.modal h2 { margin: 0 0 6px; font-size: 17px; }
+    dialog.modal p.hint { margin: 0 0 16px; font-size: 13px; color: #777; }
+    dialog.modal label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; color: #333; }
+    dialog.modal input[type="password"],
+    dialog.modal textarea {
       display: block;
       width: 100%;
       padding: 8px 10px;
       border: 1px solid #ccc;
       border-radius: 6px;
       font-size: 14px;
+      font-family: inherit;
     }
-    dialog#cert-dialog input[type="file"] { display: block; font-size: 13px; }
-    dialog#cert-dialog .dialog-error { color: #b3261e; font-size: 13px; margin-top: 10px; min-height: 18px; }
-    dialog#cert-dialog .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
-    dialog#cert-dialog .btn.danger { background: #d9534f; }
-    dialog#cert-dialog .btn.danger:hover { background: #c4423e; }
-    dialog#cert-dialog .btn.plain { background: #e8e8ee; color: #333; }
-    dialog#cert-dialog .btn.plain:hover { background: #dcdce4; }
+    dialog.modal textarea { font-family: monospace; font-size: 12px; resize: vertical; }
+    dialog.modal input[type="file"] { display: block; font-size: 13px; }
+    dialog.modal .dialog-error { color: #b3261e; font-size: 13px; margin-top: 10px; min-height: 18px; }
+    dialog.modal .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+    dialog.modal .btn.danger { background: #d9534f; }
+    dialog.modal .btn.danger:hover { background: #c4423e; }
+    dialog.modal .btn.plain { background: #e8e8ee; color: #333; }
+    dialog.modal .btn.plain:hover { background: #dcdce4; }
     #tab-bar {
       display: none;
       background: #2a2a45;
@@ -170,6 +173,8 @@
     <h1>📘 Visor OpenAPI</h1>
     <div class="actions">
       <span id="cert-status" title="Certificado cliente para mutual TLS"></span>
+      <span id="token-status" style="font-size:13px; color:#8fd18f;" title="Token Bearer activo"></span>
+      <button class="btn secondary" id="btn-token">Token…</button>
       <button class="btn secondary" id="btn-cert">Certificado…</button>
       <button class="btn" id="btn-open">Abrir archivos…</button>
     </div>
@@ -195,7 +200,24 @@
 
   <div id="panels"></div>
 
-  <dialog id="cert-dialog">
+  <dialog id="token-dialog" class="modal">
+    <h2>🔑 Token Bearer</h2>
+    <p class="hint">
+      El token se añadirá como cabecera <code>Authorization: Bearer …</code> en todas las
+      peticiones de "Try it out" (salvo que el endpoint ya envíe su propia Authorization).
+      Se guarda solo en este navegador.
+    </p>
+    <label for="token-value">Token (JWT)</label>
+    <textarea id="token-value" rows="5" placeholder="eyJhbGciOi..."></textarea>
+    <div class="dialog-error" id="token-error"></div>
+    <div class="dialog-actions">
+      <button class="btn danger" id="token-remove" style="display:none">Quitar token</button>
+      <button class="btn plain" id="token-cancel">Cancelar</button>
+      <button class="btn" id="token-save">Usar token</button>
+    </div>
+  </dialog>
+
+  <dialog id="cert-dialog" class="modal">
     <h2>🔐 Certificado cliente (mutual TLS)</h2>
     <p class="hint">
       Para APIs que exigen certificado (p. ej. idCAT). Se envía al servidor local y se
@@ -271,6 +293,13 @@
     if (!proxyAvailable) document.getElementById('file-warning').style.display = 'block';
 
     function proxyInterceptor(req) {
+      // Inyecta el token Bearer si está configurado y el endpoint no envía el suyo.
+      const token = localStorage.getItem('bearerToken');
+      if (token) {
+        req.headers = req.headers || {};
+        const hasAuth = Object.keys(req.headers).some(h => h.toLowerCase() === 'authorization');
+        if (!hasAuth) req.headers['Authorization'] = 'Bearer ' + token;
+      }
       if (!proxyAvailable) return req;
       try {
         const target = new URL(req.url, location.href);
@@ -466,6 +495,46 @@
     });
 
     fetchCertStatus();
+
+    // --- Gestión del token Bearer ---
+    const tokenDialog = document.getElementById('token-dialog');
+    const tokenStatus = document.getElementById('token-status');
+    const tokenValue = document.getElementById('token-value');
+    const tokenError = document.getElementById('token-error');
+    const tokenRemove = document.getElementById('token-remove');
+
+    function refreshTokenUI() {
+      const token = localStorage.getItem('bearerToken');
+      tokenStatus.textContent = token ? '🔑 token activo' : '';
+      tokenRemove.style.display = token ? 'inline-block' : 'none';
+    }
+
+    document.getElementById('btn-token').addEventListener('click', () => {
+      tokenError.textContent = '';
+      tokenValue.value = localStorage.getItem('bearerToken') || '';
+      tokenDialog.showModal();
+    });
+
+    document.getElementById('token-cancel').addEventListener('click', () => tokenDialog.close());
+
+    document.getElementById('token-save').addEventListener('click', () => {
+      const token = tokenValue.value.trim().replace(/^Bearer\s+/i, '');
+      if (!token) {
+        tokenError.textContent = 'Pega el token (con o sin el prefijo "Bearer").';
+        return;
+      }
+      localStorage.setItem('bearerToken', token);
+      refreshTokenUI();
+      tokenDialog.close();
+    });
+
+    tokenRemove.addEventListener('click', () => {
+      localStorage.removeItem('bearerToken');
+      refreshTokenUI();
+      tokenDialog.close();
+    });
+
+    refreshTokenUI();
 
     document.getElementById('btn-open').addEventListener('click', () => fileInput.click());
     dropZone.addEventListener('click', () => fileInput.click());

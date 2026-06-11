@@ -27,6 +27,13 @@ restricciones CORS. Además, el proxy captura las cabeceras `Set-Cookie` de las 
 (p. ej. de un endpoint de login) y reenvía esas cookies en las peticiones siguientes al
 mismo origen.
 
+## Token Bearer
+
+Para APIs que exigen `Authorization: Bearer <token>` (lo indican con la cabecera
+`www-authenticate: Bearer` en sus respuestas 401): botón **"Token…"** → pega el JWT.
+Se añade automáticamente a todas las peticiones de "Try it out", aunque el spec no
+defina el esquema de seguridad. Se guarda solo en el navegador (localStorage).
+
 ## Certificado cliente (mutual TLS)
 
 Para APIs que exigen certificado cliente (p. ej. idCAT en APIs de gencat.cat):
